@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Symbol Status</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 420px;
+      margin: 0 auto;
+      padding: 24px 20px;
+      text-align: center;
+      background: #fafafa;
+      color: #222;
+      min-height: 100vh;
+    }
+    h1 {
+      color: #1a1a1a;
+      font-size: 2.2em;
+      margin: 0 0 8px 0;
+      letter-spacing: 0.02em;
+    }
+    .subtitle { color: #666; margin: 0 0 20px 0; }
+    #loading { color: #666; padding: 40px 0; }
+    #symbol, #resultSymbol {
+      transition: transform 0.3s ease;
+      background: #fff;
+      padding: 16px;
+      border-radius: 12px;
+    }
+    #symbol:hover, #resultSymbol:hover { transform: scale(1.08); }
+    button {
+      background: #222;
+      color: #fff;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 8px;
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    button:hover {
+      background: #444;
+      transform: translateY(-2px);
+    }
+    button:active { transform: translateY(0); }
+    #hints button {
+      background: transparent;
+      border: 1px solid #ccc;
+      color: #666;
+      padding: 10px 14px;
+      font-size: 0.85em;
+      margin: 0 4px;
+    }
+    #hints button:hover {
+      border-color: #222;
+      color: #222;
+      transform: none;
+    }
+    #hintDisplay { color: #444; font-style: italic; min-height: 1.4em; }
+    #slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #ddd;
+      outline: none;
+      margin: 12px 0;
+    }
+    #slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #222;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    #slider::-webkit-slider-thumb:hover { transform: scale(1.1); }
+    #slider::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #222;
+      cursor: pointer;
+      border: none;
+    }
+    #guessDisplay {
+      font-size: 3em;
+      font-weight: 700;
+      color: #1a1a1a;
+    }
+    .year-labels { display: flex; justify-content: space-between; color: #999; font-size: 0.85em; }
+    .guess-pill {
+      display: inline-block;
+      padding: 8px 16px;
+      margin: 4px;
+      border-radius: 20px;
+      color: white;
+      font-weight: 600;
+    }
+    a { color: #0066cc; text-decoration: none; transition: color 0.2s; }
+    a:hover { color: #004499; text-decoration: underline; }
+    .result-msg { font-size: 1.6em; font-weight: 600; margin: 16px 0; color: #222; }
+    .result-msg.won { color: #16a34a; }
+    .result-msg.lost { color: #dc2626; }
+    #notableCards p { color: #666; margin-bottom: 12px; }
+    .card-img {
+      width: 80px;
+      border-radius: 8px;
+      transition: transform 0.3s ease;
+    }
+    .card-img:hover {
+      transform: scale(2.2);
+      z-index: 10;
+      position: relative;
+    }
+    @media (min-width: 500px) { .card-img { width: 100px; } }
+    .tomorrow-msg { color: #888; font-size: 0.9em; margin-top: 28px; }
+  </style>
+</head>
+<body>
+  <h1 title="Create a 1/1 colorless Expansion-Symbol creature token for each correct guess.">Symbol Status</h1>
+  <p class="subtitle">Guess the year this set was released.</p>
+  
+  <div id="loading">Loading...</div>
+  
+  <div id="game" style="display: none;">
+    <div style="margin: 28px 0;">
+      <img id="symbol" style="width: 110px; height: 110px;" alt="Set symbol">
+    </div>
+    
+    <div id="hints" style="margin: 16px 0;">
+      <button onclick="revealCode()">Reveal Code</button>
+      <button onclick="revealName()">Reveal Name</button>
+    </div>
+    <div id="hintDisplay" style="margin: 12px 0;"></div>
+    
+    <div style="margin: 28px 0;">
+      <div id="guessDisplay"></div>
+      <input type="range" id="slider">
+      <div class="year-labels">
+        <span id="minYear"></span>
+        <span id="maxYear"></span>
+      </div>
+    </div>
+    
+    <button id="guessBtn" onclick="submitGuess()" style="width: 100%;">Guess (3 remaining)</button>
+    
+    <div id="guesses" style="margin-top: 24px;"></div>
+  </div>
+  
+  <div id="result" style="display: none;">
+    <div style="margin: 28px 0;">
+      <img id="resultSymbol" style="width: 110px; height: 110px;" alt="Set symbol">
+    </div>
+    <p id="resultMsg" class="result-msg"></p>
+    <p><a id="setLink" href="#" target="_blank"><strong id="setName"></strong></a> (<span id="setYear"></span>)</p>
+    <div id="resultGuesses" style="margin-top: 20px;"></div>
+    
+    <div id="notableCards" style="margin-top: 28px;">
+      <p><strong>Notable cards from this set:</strong></p>
+      <div id="cardImages" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;"></div>
+    </div>
+    
+    <p class="tomorrow-msg">Come back tomorrow for a new set!</p>
+  </div>
+
+  <script>
+    const MAX_GUESSES = 3;
+    const MIN_YEAR = 1993;
+    const MAX_YEAR = new Date().getFullYear();
+    const CACHE_KEY = 'symbolstatus-sets-cache';
+    const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+    const RATE_LIMIT_KEY = 'symbolstatus-last-fetch';
+    const RATE_LIMIT_MS = 5000; // 5 seconds minimum between fetches
+    
+    let todaySet = null;
+    let setYear = null;
+    let guesses = [];
+    let codeRevealed = false;
+    let nameRevealed = false;
+    let gameOver = false;
+    let won = false;
+    
+    function getTodayKey() {
+      const d = new Date();
+      return 'symbolstatus-' + d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+    }
+    
+    function getCachedSets() {
+      try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const { sets, timestamp } = JSON.parse(cached);
+          if (Date.now() - timestamp < CACHE_DURATION) {
+            return sets;
+          }
+        }
+      } catch (e) {}
+      return null;
+    }
+    
+    function cacheSets(sets) {
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({
+          sets: sets,
+          timestamp: Date.now()
+        }));
+      } catch (e) {}
+    }
+    
+    function canFetch() {
+      try {
+        const lastFetch = localStorage.getItem(RATE_LIMIT_KEY);
+        if (lastFetch && Date.now() - parseInt(lastFetch) < RATE_LIMIT_MS) {
+          return false;
+        }
+      } catch (e) {}
+      return true;
+    }
+    
+    function markFetch() {
+      try {
+        localStorage.setItem(RATE_LIMIT_KEY, Date.now().toString());
+      } catch (e) {}
+    }
+    
+    function saveState() {
+      localStorage.setItem(getTodayKey(), JSON.stringify({
+        guesses: guesses,
+        gameOver: gameOver,
+        won: won,
+        codeRevealed: codeRevealed,
+        nameRevealed: nameRevealed
+      }));
+    }
+    
+    function loadState() {
+      const saved = localStorage.getItem(getTodayKey());
+      if (saved) {
+        const data = JSON.parse(saved);
+        guesses = data.guesses || [];
+        gameOver = data.gameOver || false;
+        won = data.won || false;
+        codeRevealed = data.codeRevealed || false;
+        nameRevealed = data.nameRevealed || false;
+        return true;
+      }
+      return false;
+    }
+    
+    function hashDate(str) {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash = hash & hash;
+      }
+      return Math.abs(hash);
+    }
+    
+    function getTodayString() {
+      const d = new Date();
+      return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+    }
+    
+    function getColor(guess, actual) {
+      const diff = Math.abs(guess - actual);
+      if (diff === 0) return 'green';
+      if (diff <= 3) return 'orange';
+      return 'red';
+    }
+    
+    function updateHintDisplay() {
+      const parts = [];
+      if (codeRevealed) parts.push(todaySet.code.toUpperCase());
+      if (nameRevealed) parts.push(todaySet.name);
+      document.getElementById('hintDisplay').textContent = parts.join(' — ');
+    }
+    
+    function revealCode() {
+      codeRevealed = true;
+      updateHintDisplay();
+      saveState();
+    }
+    
+    function revealName() {
+      nameRevealed = true;
+      updateHintDisplay();
+      saveState();
+    }
+    
+    function submitGuess() {
+      const guess = parseInt(document.getElementById('slider').value);
+      guesses.push(guess);
+      
+      won = guess === setYear;
+      gameOver = won || guesses.length >= MAX_GUESSES;
+      
+      saveState();
+      
+      if (gameOver) {
+        showResult(won);
+      } else {
+        updateGuesses();
+        document.getElementById('guessBtn').textContent = 'Guess (' + (MAX_GUESSES - guesses.length) + ' remaining)';
+      }
+    }
+    
+    function updateGuesses() {
+      const container = document.getElementById('guesses');
+      container.innerHTML = '';
+      guesses.forEach((g, i) => {
+        const div = document.createElement('div');
+        div.className = 'guess-pill';
+        div.style.backgroundColor = getColor(g, setYear);
+        div.textContent = g;
+        container.appendChild(div);
+      });
+    }
+    
+    function showResult(won) {
+      document.getElementById('game').style.display = 'none';
+      document.getElementById('result').style.display = 'block';
+      document.getElementById('resultSymbol').src = todaySet.icon_svg_uri;
+      document.getElementById('resultMsg').textContent = won ? 'You got it!' : 'Better luck tomorrow!';
+      document.getElementById('setName').textContent = todaySet.name;
+      document.getElementById('setYear').textContent = setYear;
+      document.getElementById('setLink').href = todaySet.scryfall_uri;
+      
+      const container = document.getElementById('resultGuesses');
+      container.innerHTML = '';
+      guesses.forEach(g => {
+        const div = document.createElement('div');
+        div.className = 'guess-pill';
+        div.style.backgroundColor = getColor(g, setYear);
+        div.textContent = g + (g === setYear ? ' ✓' : '');
+        container.appendChild(div);
+      });
+      
+      document.getElementById('resultMsg').classList.add(won ? 'won' : 'lost');
+      
+      // Fetch notable cards
+      fetch('https://api.scryfall.com/cards/search?q=set%3A' + todaySet.code + '&order=edhrec&dir=asc')
+        .then(r => r.json())
+        .then(data => {
+          const cardContainer = document.getElementById('cardImages');
+          const cards = data.data.slice(0, 5);
+          cards.forEach(card => {
+            const imgSrc = card.image_uris ? card.image_uris.small : (card.card_faces && card.card_faces[0].image_uris ? card.card_faces[0].image_uris.small : '');
+            if (imgSrc) {
+              const link = document.createElement('a');
+              link.href = card.scryfall_uri;
+              link.target = '_blank';
+              const img = document.createElement('img');
+              img.src = imgSrc;
+              img.alt = card.name;
+              img.title = card.name;
+              img.className = 'card-img';
+              link.appendChild(img);
+              cardContainer.appendChild(link);
+            }
+          });
+        })
+        .catch(() => {
+          document.getElementById('notableCards').style.display = 'none';
+        });
+    }
+    
+    // Init
+    const slider = document.getElementById('slider');
+    slider.min = MIN_YEAR;
+    slider.max = MAX_YEAR;
+    slider.value = MIN_YEAR;
+    document.getElementById('guessDisplay').textContent = MIN_YEAR;
+    document.getElementById('minYear').textContent = MIN_YEAR;
+    document.getElementById('maxYear').textContent = MAX_YEAR;
+    slider.addEventListener('input', function() {
+      document.getElementById('guessDisplay').textContent = this.value;
+    });
+    
+    function initGame(sets) {
+      const index = hashDate(getTodayString()) % sets.length;
+      todaySet = sets[index];
+      setYear = new Date(todaySet.released_at).getFullYear();
+      
+      document.getElementById('symbol').src = todaySet.icon_svg_uri;
+      document.getElementById('loading').style.display = 'none';
+      
+      loadState();
+      
+      if (gameOver) {
+        showResult(won);
+      } else {
+        document.getElementById('game').style.display = 'block';
+        if (guesses.length > 0) {
+          updateGuesses();
+          document.getElementById('guessBtn').textContent = 'Guess (' + (MAX_GUESSES - guesses.length) + ' remaining)';
+        }
+        if (codeRevealed || nameRevealed) {
+          updateHintDisplay();
+        }
+      }
+    }
+    
+    function filterSets(data) {
+      return data.filter(s => 
+        ['expansion', 'core', 'masters', 'draft_innovation', 'commander', 'funny'].includes(s.set_type) &&
+        s.icon_svg_uri &&
+        new Date(s.released_at).getFullYear() >= MIN_YEAR
+      );
+    }
+    
+    // Check cache first
+    const cachedSets = getCachedSets();
+    if (cachedSets) {
+      initGame(cachedSets);
+    } else if (!canFetch()) {
+      document.getElementById('loading').textContent = 'Please wait a moment before refreshing...';
+      setTimeout(() => location.reload(), RATE_LIMIT_MS);
+    } else {
+      markFetch();
+      fetch('https://api.scryfall.com/sets')
+        .then(r => r.json())
+        .then(data => {
+          const sets = filterSets(data.data);
+          cacheSets(sets);
+          initGame(sets);
+        })
+        .catch(() => {
+          document.getElementById('loading').textContent = 'Failed to load. Please try again.';
+        });
+    }
+  </script>
+</body>
+</html>
