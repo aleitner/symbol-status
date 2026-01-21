@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link id="favicon" rel="icon" type="image/svg+xml" href="">
   <title>Symbol Status</title>
   <style>
     * { box-sizing: border-box; }
@@ -343,8 +344,8 @@
       
       document.getElementById('resultMsg').classList.add(won ? 'won' : 'lost');
       
-      // Fetch notable cards
-      fetch('https://api.scryfall.com/cards/search?q=set%3A' + todaySet.code + '&order=edhrec&dir=asc')
+      // Fetch notable cards (only cards new to this set, not reprints)
+      fetch('https://api.scryfall.com/cards/search?q=set%3A' + todaySet.code + '+is%3Afirstprint&order=edhrec&dir=asc')
         .then(r => r.json())
         .then(data => {
           const cardContainer = document.getElementById('cardImages');
@@ -388,6 +389,7 @@
       setYear = new Date(todaySet.released_at).getFullYear();
       
       document.getElementById('symbol').src = todaySet.icon_svg_uri;
+      document.getElementById('favicon').href = todaySet.icon_svg_uri;
       document.getElementById('loading').style.display = 'none';
       
       loadState();
