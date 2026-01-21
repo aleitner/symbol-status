@@ -168,6 +168,8 @@
     </div>
     
     <p class="tomorrow-msg">Come back tomorrow for a new set!</p>
+    
+    <button id="shareBtn" onclick="shareResults()" style="margin-top: 16px;">Copy Results</button>
   </div>
 
   <script>
@@ -255,6 +257,7 @@
     }
     
     function hashDate(str) {
+      // Better hash function with more variance
       let hash = 2166136261; // FNV offset basis
       for (let i = 0; i < str.length; i++) {
         hash ^= str.charCodeAt(i);
@@ -350,6 +353,9 @@
       
       document.getElementById('resultMsg').classList.add(won ? 'won' : 'lost');
       
+      // Enable share button
+      document.getElementById('shareBtn').onclick = shareResults;
+      
       // Fetch notable cards (only cards new to this set, not reprints)
       fetch('https://api.scryfall.com/cards/search?q=set%3A' + todaySet.code + '+is%3Afirstprint&order=edhrec&dir=asc')
         .then(r => r.json())
@@ -375,6 +381,24 @@
         .catch(() => {
           document.getElementById('notableCards').style.display = 'none';
         });
+    }
+    
+    function shareResults() {
+      const emojis = guesses.map(g => {
+        const diff = Math.abs(g - setYear);
+        if (diff === 0) return '🟩';
+        if (diff <= 3) return '🟨';
+        return '🟥';
+      }).join('');
+      
+      const result = won ? emojis : emojis + ' ❌';
+      const text = `[Symbol Status](https://aleitner.github.io/symbol-status) ${result}\n||${todaySet.code.toUpperCase()}||`;
+      
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('shareBtn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy Results', 2000);
+      });
     }
     
     // Init
