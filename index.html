@@ -255,11 +255,17 @@
     }
     
     function hashDate(str) {
-      let hash = 0;
+      let hash = 2166136261; // FNV offset basis
       for (let i = 0; i < str.length; i++) {
-        hash = ((hash << 5) - hash) + str.charCodeAt(i);
-        hash = hash & hash;
+        hash ^= str.charCodeAt(i);
+        hash = Math.imul(hash, 16777619); // FNV prime
       }
+      // Additional mixing
+      hash ^= hash >>> 16;
+      hash = Math.imul(hash, 2246822507);
+      hash ^= hash >>> 13;
+      hash = Math.imul(hash, 3266489909);
+      hash ^= hash >>> 16;
       return Math.abs(hash);
     }
     
